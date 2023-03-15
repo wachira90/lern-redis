@@ -39,3 +39,18 @@ D:\db\redis64-5>redis-server.exe redis.conf
 [12108] 15 Mar 21:08:44.347 * Ready to accept connections
 ```
 
+## set password
+
+edit redis.conf
+
+```
+requirepass passhere
+```
+
+## test
+
+```
+127.0.0.1:6379> set mykey myvalue
+(error) NOAUTH Authentication required.
+```
+
