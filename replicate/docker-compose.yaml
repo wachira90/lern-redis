@@ -1,0 +1,65 @@
+services:
+  redis-master:
+    image: redis/redis-stack-server:latest
+    container_name: redis-master
+    hostname: redis-master
+    restart: always
+    logging:
+        driver: "json-file"
+        options:
+            max-size: "10m"
+            max-file: "3"
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-master-data:/data
+    environment:
+      - REDIS_ARGS=--requirepass ${REDIS_MASTER_PASSWORD} --maxmemory 4gb --maxmemory-policy allkeys-lru --save 900 1 --save 300 10 --save 60 10000 --appendonly yes --appendfsync everysec --tcp-keepalive 300 --timeout 300 --tcp-backlog 511 --databases 16
+
+  redis-replica:
+    image: redis/redis-stack-server:latest
+    container_name: redis-replica
+    hostname: redis-replica
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      - redis-master
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-replica-data:/data
+    environment:
+      - REDIS_ARGS=--requirepass ${REDIS_REPLICA_PASSWORD} --maxmemory 4gb --maxmemory-policy allkeys-lru --save 900 1 --save 300 10 --save 60 10000 --appendonly yes --appendfsync everysec --tcp-keepalive 300 --timeout 300 --tcp-backlog 511 --databases 16 --replicaof redis-master 6379 --masterauth ${REDIS_MASTER_PASSWORD}
+
+  redis-sentinel:
+    image: redis:latest
+    container_name: redis-sentinel
+    hostname: redis-sentinel
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      - redis-master
+      - redis-replica
+    ports:
+      - "26379:26379"
+    volumes:
+      - ./config/sentinel.conf:/usr/local/etc/redis/sentinel.conf
+    command: ["redis-sentinel", "/usr/local/etc/redis/sentinel.conf"]
+    environment:
+      - REDIS_PASSWORD=${REDIS_MASTER_PASSWORD}
+
+networks:
+  default:
+    name: redis-network
+
+volumes:
+  redis-master-data:
+  redis-replica-data:
